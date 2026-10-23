@@ -3,12 +3,19 @@
   "name": "Cuevana",
   "version": "1.0.0",
   "description": "Catálogo Cuevana para Nuvio. Home, búsqueda, descubrir y detalle por URL.",
-  "author": "Community",
+  "author": "JostinSantos",
   "logo": "https://wv3.cuevana3.eu/favicon-32x32.png",
   "homepage": "https://wv3.cuevana3.eu",
   "entry": "index.js",
   "color": "#E50914",
-  "capabilities": ["home", "search", "discover", "meta", "streams", "catalogs"],
+  "capabilities": [
+    "home",
+    "search",
+    "discover",
+    "meta",
+    "streams",
+    "catalogs"
+  ],
   "config": [
     {
       "key": "base_url",
@@ -24,5 +31,11 @@
       "default": "",
       "placeholder": "Dejar vacío para usar la de demo"
     }
+  ],
+  "languages": [
+    "Latino",
+    "Castellano",
+    "Inglés",
+    "Subtitulado"
   ]
 }
