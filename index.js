@@ -1421,37 +1421,47 @@ async function search(query) {
 function getDiscoverFilters() {
   return {
     filters: [
-      { id: 'all', label: 'Todo' },
-      { id: 'movie', label: 'Películas' },
-      { id: 'series', label: 'Series' },
-      { id: 'accion', label: 'Acción' },
-      { id: 'comedia', label: 'Comedia' },
-      { id: 'drama', label: 'Drama' },
-      { id: 'terror', label: 'Terror' },
-      { id: 'animacion', label: 'Animación' },
+      {
+        id: 'tipo',
+        label: 'Tipo',
+        options: [
+          { id: 'movie', label: 'Películas' },
+          { id: 'tv', label: 'Series' },
+          { id: 'tendencias', label: 'Tendencias' },
+        ],
+      },
+      {
+        id: 'genero',
+        label: 'Género',
+        options: [
+          { id: '', label: 'Todos' },
+          { id: 'accion', label: 'Acción' },
+          { id: 'comedia', label: 'Comedia' },
+          { id: 'terror', label: 'Terror' },
+          { id: 'drama', label: 'Drama' },
+          { id: 'ciencia-ficcion', label: 'Ciencia ficción' },
+        ],
+      },
+      {
+        id: 'orden',
+        label: 'Orden',
+        options: [
+          { id: 'latest', label: 'Más recientes' },
+          { id: 'rating', label: 'Mejor valoradas' },
+        ],
+      },
     ],
   };
 }
 
 async function getDiscover(opts) {
   opts = opts || {};
-  if (typeof opts === 'string') opts = { filter: opts };
-  var filter = (opts.filter || opts.genre || opts.tipo || 'all').toString().toLowerCase();
-
-  var tipo = null;
-  var genero = null;
-  if (filter === 'movie' || filter === 'peliculas') tipo = 'movie';
-  else if (filter === 'series' || filter === 'tv') tipo = 'series';
-  else if (GENEROS.indexOf(filter) >= 0) genero = filter;
-  else if (filter === 'all' || filter === 'todo') tipo = 'movie';
-  else tipo = 'movie';
-
-  try {
-    var list = await fetchList({ tipo: tipo, genero: genero, page: 1 });
-    return { items: list.items || [] };
-  } catch (e) {
-    return { items: [] };
-  }
+  var page = parseInt(opts.page, 10) || 1;
+  var tipo = opts.tipo || opts.type || opts.filter || 'movie';
+  var genero = opts.genero || opts.genre || '';
+  var list = await fetchList({ tipo: tipo, genero: genero, page: page });
+  var items = (list || []).map(mapListItem).filter(Boolean);
+  return { items: items, hasMore: items.length >= 20, page: page };
 }
 
 /**
@@ -1591,16 +1601,15 @@ async function getCatalogs() {
   };
 }
 
-async function getCatalog(catalogId) {
+async function getCatalog(catalogId, opts) {
+  opts = opts || {};
+  var page = parseInt(opts.page, 10) || 1;
   var tipo = 'movie';
-  if (catalogId === 'cat_series') tipo = 'series';
-  if (catalogId === 'cat_tendencias') tipo = 'tendencias';
-  try {
-    var list = await fetchList({ tipo: tipo, page: 1 });
-    return { items: list.items || [] };
-  } catch (e) {
-    return { items: [] };
-  }
+  if (String(catalogId).indexOf('serie') >= 0 || String(catalogId).indexOf('tv') >= 0) tipo = 'tv';
+  if (String(catalogId).indexOf('tend') >= 0) tipo = 'tendencias';
+  var list = await fetchList({ tipo: tipo, page: page });
+  var items = (list || []).map(mapListItem).filter(Boolean);
+  return { items: items, hasMore: items.length >= 20, page: page };
 }
 
 // Export para el runtime de Nuvio
