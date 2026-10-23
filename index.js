@@ -1604,6 +1604,14 @@ async function getCatalog(catalogId) {
 }
 
 // Export para el runtime de Nuvio
+async function getNews() {
+  return {
+    items: [
+      { title: 'Cuevana actualizado', message: 'Nuevos servidores y catálogo' },
+    ],
+  };
+}
+
 if (typeof module !== 'undefined') {
   module.exports = {
     getHome: getHome,
@@ -1614,5 +1622,6 @@ if (typeof module !== 'undefined') {
     getStreams: getStreams,
     getCatalogs: getCatalogs,
     getCatalog: getCatalog,
+    getNews: getNews,
   };
 }
