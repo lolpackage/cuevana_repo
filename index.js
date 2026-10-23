@@ -1179,16 +1179,56 @@ async function fetchList(opts) {
   opts = opts || {};
   var tipo = opts.tipo || null;
   var genero = opts.genero || null;
+  var seccion = opts.seccion || opts.categoria || null;
   var page = opts.page || 1;
+  var pathOpt = opts.path || null;
 
   var path = '';
   var mode = 'movies';
 
-  if (genero && genero.length) {
-    if (GENEROS.indexOf(genero) === -1) {
-      throw new Error('Género no válido: ' + genero);
-    }
+  if (pathOpt) {
+    path = String(pathOpt);
+    if (path.indexOf('/') !== 0) path = '/' + path;
+  } else if (genero && genero.length && genero !== 'todos') {
     path = '/genero/' + genero;
+  } else if (seccion) {
+    switch (String(seccion).toLowerCase()) {
+      case 'peliculas':
+      case 'ultimas':
+      case 'movie':
+        path = '/peliculas';
+        break;
+      case 'estrenos-movie':
+      case 'estrenos_peliculas':
+        path = '/peliculas/estrenos';
+        break;
+      case 'tendencias-movie':
+      case 'tendencias_peliculas':
+        path = '/peliculas/tendencias/dia';
+        break;
+      case 'generos':
+      case 'genero':
+        path = '/genero/' + (genero || 'accion');
+        break;
+      case 'series':
+      case 'tv':
+        path = '/series';
+        break;
+      case 'estrenos-tv':
+      case 'estrenos_series':
+        path = '/series/estrenos';
+        break;
+      case 'tendencias-tv':
+      case 'tendencias_series':
+        path = '/series/tendencias/semana';
+        break;
+      case 'episodios':
+        path = '/episodios';
+        mode = 'episodes';
+        break;
+      default:
+        path = '/peliculas';
+    }
   } else {
     switch (String(tipo || '').toLowerCase()) {
       case 'movie':
@@ -1199,14 +1239,10 @@ async function fetchList(opts) {
       case 'tv':
       case 'serie':
       case 'series':
-      case 'anime':
-      case 'dorama':
         path = '/series';
         break;
       case 'tendencias':
-      case 'series-populares':
-      case 'tv-tendencias':
-        path = '/series/tendencias/dia';
+        path = '/peliculas/tendencias/dia';
         break;
       case 'episodios':
       case 'capitulos':
@@ -1418,50 +1454,90 @@ async function search(query) {
   return { items: items };
 }
 
-function getDiscoverFilters() {
-  return {
-    filters: [
-      {
-        id: 'tipo',
-        label: 'Tipo',
-        options: [
-          { id: 'movie', label: 'Películas' },
-          { id: 'tv', label: 'Series' },
-          { id: 'tendencias', label: 'Tendencias' },
-        ],
-      },
-      {
+function getDiscoverFilters(opts) {
+  opts = opts || {};
+  var tipo = opts.tipo || 'movie';
+  var seccion = opts.seccion || '';
+
+  var filters = [
+    {
+      id: 'tipo',
+      label: 'Tipo',
+      options: [
+        { id: 'movie', label: 'Películas' },
+        { id: 'tv', label: 'Series' },
+      ],
+    },
+  ];
+
+  if (tipo === 'tv' || tipo === 'series') {
+    filters.push({
+      id: 'seccion',
+      label: 'Sección',
+      options: [
+        { id: 'series', label: 'Series' },
+        { id: 'estrenos-tv', label: 'Estrenos' },
+        { id: 'tendencias-tv', label: 'Tendencias' },
+      ],
+    });
+  } else {
+    filters.push({
+      id: 'seccion',
+      label: 'Sección',
+      options: [
+        { id: 'peliculas', label: 'Últimas publicadas' },
+        { id: 'estrenos-movie', label: 'Estrenos' },
+        { id: 'tendencias-movie', label: 'Tendencias' },
+        { id: 'generos', label: 'Géneros' },
+      ],
+    });
+    if (seccion === 'generos' || seccion === 'genero') {
+      filters.push({
         id: 'genero',
         label: 'Género',
-        options: [
-          { id: '', label: 'Todos' },
-          { id: 'accion', label: 'Acción' },
-          { id: 'comedia', label: 'Comedia' },
-          { id: 'terror', label: 'Terror' },
-          { id: 'drama', label: 'Drama' },
-          { id: 'ciencia-ficcion', label: 'Ciencia ficción' },
-        ],
-      },
-      {
-        id: 'orden',
-        label: 'Orden',
-        options: [
-          { id: 'latest', label: 'Más recientes' },
-          { id: 'rating', label: 'Mejor valoradas' },
-        ],
-      },
-    ],
-  };
+        options: GENEROS.map(function (g) {
+          return {
+            id: g,
+            label: g.charAt(0).toUpperCase() + g.slice(1).replace(/-/g, ' '),
+          };
+        }),
+      });
+    }
+  }
+
+  return { filters: filters };
 }
 
 async function getDiscover(opts) {
   opts = opts || {};
   var page = parseInt(opts.page, 10) || 1;
-  var tipo = opts.tipo || opts.type || opts.filter || 'movie';
-  var genero = opts.genero || opts.genre || '';
-  var list = await fetchList({ tipo: tipo, genero: genero, page: page });
-  var items = (list || []).map(mapListItem).filter(Boolean);
-  return { items: items, hasMore: items.length >= 20, page: page };
+  var tipo = opts.tipo || 'movie';
+  var seccion = opts.seccion || '';
+  var genero = opts.genero || '';
+
+  // Defaults por tipo
+  if (!seccion) {
+    seccion = tipo === 'tv' || tipo === 'series' ? 'series' : 'peliculas';
+  }
+
+  var list;
+  try {
+    list = await fetchList({
+      tipo: tipo,
+      seccion: seccion,
+      genero: genero,
+      page: page,
+    });
+  } catch (e) {
+    return { items: [], hasMore: false, page: page, error: String(e && e.message || e) };
+  }
+
+  var items = (list && list.items) || [];
+  return {
+    items: items,
+    hasMore: items.length >= 18,
+    page: page,
+  };
 }
 
 /**
@@ -1614,11 +1690,25 @@ async function getCatalog(catalogId, opts) {
 
 // Export para el runtime de Nuvio
 async function getNews() {
-  return {
-    items: [
-      { title: 'Cuevana actualizado', message: 'Nuevos servidores y catálogo' },
-    ],
-  };
+  try {
+    var list = await fetchList({ seccion: 'episodios', page: 1 });
+    var items = (list && list.items) || [];
+    return {
+      items: items.slice(0, 12).map(function (it) {
+        return {
+          title: it.title || 'Episodio',
+          message: (it.extra && it.extra.season != null)
+            ? ('T' + it.extra.season + ' E' + (it.extra.episode || ''))
+            : 'Capítulo reciente',
+          poster: it.poster,
+          id: it.id,
+          url: it.url || it.id,
+        };
+      }),
+    };
+  } catch (e) {
+    return { items: [] };
+  }
 }
 
 if (typeof module !== 'undefined') {
