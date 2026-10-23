@@ -1,0 +1,28 @@
+{
+  "id": "cuevana-nuvio",
+  "name": "Cuevana",
+  "version": "1.0.0",
+  "description": "Catálogo Cuevana para Nuvio. Home, búsqueda, descubrir y detalle por URL.",
+  "author": "Community",
+  "logo": "https://wv3.cuevana3.eu/favicon-32x32.png",
+  "homepage": "https://wv3.cuevana3.eu",
+  "entry": "index.js",
+  "color": "#E50914",
+  "capabilities": ["home", "search", "discover", "meta", "streams", "catalogs"],
+  "config": [
+    {
+      "key": "base_url",
+      "label": "URL base Cuevana",
+      "type": "text",
+      "default": "https://wv3.cuevana3.eu",
+      "placeholder": "https://wv3.cuevana3.eu"
+    },
+    {
+      "key": "tmdb_key",
+      "label": "TMDB API Key (opcional)",
+      "type": "text",
+      "default": "",
+      "placeholder": "Dejar vacío para usar la de demo"
+    }
+  ]
+}
