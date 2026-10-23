@@ -30,7 +30,7 @@
       "type": "select",
       "default": "Latino",
       "description": "Se usa al abrir el player para elegir el servidor de este idioma primero.",
-      "options": ["Latino", "Castellano", "Inglés", "Subtitulado", "Japonés"]
+      "options": ["Latino", "Castellano", "Inglés"]
     }
   ]
 }
