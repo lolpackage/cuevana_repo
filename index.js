@@ -205,6 +205,7 @@ function detectServer(url) {
   var s = hostOf(url);
   if (
     s.indexOf('voe') >= 0 ||
+    s.indexOf('voesx') >= 0 ||
     s.indexOf('cloudwindow') >= 0 ||
     s.indexOf('marissashare') >= 0
   )
@@ -238,6 +239,8 @@ function detectServer(url) {
     return 'vidhide';
   if (s.indexOf('dood') >= 0 || s.indexOf('ds2play') >= 0 || s.indexOf('ds2video') >= 0)
     return 'doodstream';
+  if (s.indexOf('player.cuevana') >= 0 || s.indexOf('player.php') >= 0)
+    return 'cuevana-player';
   return 'unknown';
 }
 var QUALITY_MAPS = {
@@ -564,16 +567,50 @@ function resolveStreamWish(url) {
 function resolveVidHide(url) {
   return resolvePacked(url);
 }
+/** Desenvuelve player.cuevana3.eu/player.php?h=... → embed real (voe/streamwish/dood/...) */
+async function unwrapCuevanaPlayer(url) {
+  var u = String(url || '');
+  if (u.indexOf('player.php') < 0 && u.indexOf('player.cuevana') < 0) return null;
+  try {
+    var html = await httpGet(u, {
+      Referer: srcBase() + '/',
+      Accept: 'text/html,application/xhtml+xml',
+    });
+    if (!html) return null;
+    // var url = 'https://voe.sx/e/...'  (formato actual del player)
+    var m =
+      /var\s+url\s*=\s*['"](https?:\/\/[^'"]+)['"]/i.exec(html) ||
+      /window\.location\.href\s*=\s*['"](https?:\/\/[^'"]+)['"]/i.exec(html) ||
+      /location\.replace\(\s*['"](https?:\/\/[^'"]+)['"]/i.exec(html) ||
+      /src\s*=\s*['"](https?:\/\/(?:voe|streamwish|dood|filemoon|vidhide|filelions)[^'"]+)['"]/i.exec(html);
+    if (m && m[1] && m[1].indexOf('player.php') < 0) {
+      dbg('unwrap player →', m[1]);
+      return m[1];
+    }
+  } catch (e) {
+    dbg('unwrap player error', e && e.message);
+  }
+  return null;
+}
+
 async function resolveGeneric(url, depth) {
   depth = depth || 0;
   try {
+    // Si es el player intermedio de Cuevana, primero sacar el embed real
+    var unwrapped = await unwrapCuevanaPlayer(url);
+    if (unwrapped && unwrapped !== url) {
+      return await extract(unwrapped, depth + 1);
+    }
+
     var html = await httpGet(url, { Referer: srcBase() + '/' });
     if (!html) return null;
     var origin = originOf(url);
-    var m1 = /var url = '([^']+)'/.exec(html) || /var url = "([^"]+)"/.exec(html);
+    var m1 =
+      /var\s+url\s*=\s*['"]([^'"]+)['"]/i.exec(html) ||
+      /window\.location\.href\s*=\s*['"]([^'"]+)['"]/i.exec(html);
     if (m1) {
       var redirected = absUrl(m1[1], url);
-      if (redirected && redirected !== url) {
+      if (redirected && redirected !== url && redirected.indexOf('player.php') < 0) {
         var r1 = await extract(redirected, depth + 1);
         if (r1) return r1;
       }
@@ -610,6 +647,11 @@ async function extractOne(url, depth) {
   var server = detectServer(url);
   var result = null;
   try {
+    // Player intermedio Cuevana → desenvuelve y re-extrae
+    if (server === 'cuevana-player' || String(url).indexOf('player.php') >= 0) {
+      var real = await unwrapCuevanaPlayer(url);
+      if (real) return await extract(real, depth + 1);
+    }
     if (server === 'voe') result = await resolveVoe(url);
     else if (server === 'streamwish') result = await resolveStreamWish(url);
     else if (server === 'vidhide') result = await resolveVidHide(url);
@@ -618,7 +660,7 @@ async function extractOne(url, depth) {
     dbg('resolver error', server, url, e && e.message);
     result = null;
   }
-  if ((!result || !result.url) && server !== 'unknown') {
+  if ((!result || !result.url) && server !== 'unknown' && server !== 'cuevana-player') {
     try {
       result = await resolveGeneric(url, depth);
     } catch (e) {}
@@ -627,7 +669,17 @@ async function extractOne(url, depth) {
 }
 async function extract(embedUrl, depth) {
   depth = depth || 0;
-  if (!embedUrl || depth > 3) return null;
+  if (!embedUrl || depth > 4) return null;
+
+  // Siempre intentar desenvvolver player.php primero
+  if (String(embedUrl).indexOf('player.php') >= 0 || String(embedUrl).indexOf('player.cuevana') >= 0) {
+    var realEmbed = await unwrapCuevanaPlayer(embedUrl);
+    if (realEmbed && realEmbed !== embedUrl) {
+      dbg('player.php →', realEmbed);
+      return await extract(realEmbed, depth + 1);
+    }
+  }
+
   var candidates = embedCandidates(embedUrl);
   dbg('candidatos', candidates);
   for (var i = 0; i < candidates.length; i++) {
@@ -877,7 +929,7 @@ async function getStreamsReal(id, type, season, episode) {
   var jobs = [];
   groups.forEach(function (group) {
     group.videos.forEach(function (video) {
-      // Sin filtro: intenta resolver todos los servidores
+      // Sin filtro: intenta resolver TODOS los servidores (streamwish, voe, dood, etc.)
       jobs.push(processVideo(group, video));
     });
   });
