@@ -877,7 +877,7 @@ async function getStreamsReal(id, type, season, episode) {
   var jobs = [];
   groups.forEach(function (group) {
     group.videos.forEach(function (video) {
-      if (!isAllowed(video.cyberlocker) && !isAllowed(hostOf(video.url))) return;
+      // Sin filtro: intenta resolver todos los servidores
       jobs.push(processVideo(group, video));
     });
   });
