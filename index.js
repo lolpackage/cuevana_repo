@@ -1,3 +1,4 @@
+
 /**
  * Fuente Cuevana — Extracción directa HLS (.m3u8) / MP4
  * getStreams + extract con resolvers (VOE, StreamWish, VidHide)
@@ -205,7 +206,6 @@ function detectServer(url) {
   var s = hostOf(url);
   if (
     s.indexOf('voe') >= 0 ||
-    s.indexOf('voesx') >= 0 ||
     s.indexOf('cloudwindow') >= 0 ||
     s.indexOf('marissashare') >= 0
   )
@@ -239,8 +239,6 @@ function detectServer(url) {
     return 'vidhide';
   if (s.indexOf('dood') >= 0 || s.indexOf('ds2play') >= 0 || s.indexOf('ds2video') >= 0)
     return 'doodstream';
-  if (s.indexOf('player.cuevana') >= 0 || s.indexOf('player.php') >= 0)
-    return 'cuevana-player';
   return 'unknown';
 }
 var QUALITY_MAPS = {
@@ -567,50 +565,16 @@ function resolveStreamWish(url) {
 function resolveVidHide(url) {
   return resolvePacked(url);
 }
-/** Desenvuelve player.cuevana3.eu/player.php?h=... → embed real (voe/streamwish/dood/...) */
-async function unwrapCuevanaPlayer(url) {
-  var u = String(url || '');
-  if (u.indexOf('player.php') < 0 && u.indexOf('player.cuevana') < 0) return null;
-  try {
-    var html = await httpGet(u, {
-      Referer: srcBase() + '/',
-      Accept: 'text/html,application/xhtml+xml',
-    });
-    if (!html) return null;
-    // var url = 'https://voe.sx/e/...'  (formato actual del player)
-    var m =
-      /var\s+url\s*=\s*['"](https?:\/\/[^'"]+)['"]/i.exec(html) ||
-      /window\.location\.href\s*=\s*['"](https?:\/\/[^'"]+)['"]/i.exec(html) ||
-      /location\.replace\(\s*['"](https?:\/\/[^'"]+)['"]/i.exec(html) ||
-      /src\s*=\s*['"](https?:\/\/(?:voe|streamwish|dood|filemoon|vidhide|filelions)[^'"]+)['"]/i.exec(html);
-    if (m && m[1] && m[1].indexOf('player.php') < 0) {
-      dbg('unwrap player →', m[1]);
-      return m[1];
-    }
-  } catch (e) {
-    dbg('unwrap player error', e && e.message);
-  }
-  return null;
-}
-
 async function resolveGeneric(url, depth) {
   depth = depth || 0;
   try {
-    // Si es el player intermedio de Cuevana, primero sacar el embed real
-    var unwrapped = await unwrapCuevanaPlayer(url);
-    if (unwrapped && unwrapped !== url) {
-      return await extract(unwrapped, depth + 1);
-    }
-
     var html = await httpGet(url, { Referer: srcBase() + '/' });
     if (!html) return null;
     var origin = originOf(url);
-    var m1 =
-      /var\s+url\s*=\s*['"]([^'"]+)['"]/i.exec(html) ||
-      /window\.location\.href\s*=\s*['"]([^'"]+)['"]/i.exec(html);
+    var m1 = /var url = '([^']+)'/.exec(html) || /var url = "([^"]+)"/.exec(html);
     if (m1) {
       var redirected = absUrl(m1[1], url);
-      if (redirected && redirected !== url && redirected.indexOf('player.php') < 0) {
+      if (redirected && redirected !== url) {
         var r1 = await extract(redirected, depth + 1);
         if (r1) return r1;
       }
@@ -647,11 +611,6 @@ async function extractOne(url, depth) {
   var server = detectServer(url);
   var result = null;
   try {
-    // Player intermedio Cuevana → desenvuelve y re-extrae
-    if (server === 'cuevana-player' || String(url).indexOf('player.php') >= 0) {
-      var real = await unwrapCuevanaPlayer(url);
-      if (real) return await extract(real, depth + 1);
-    }
     if (server === 'voe') result = await resolveVoe(url);
     else if (server === 'streamwish') result = await resolveStreamWish(url);
     else if (server === 'vidhide') result = await resolveVidHide(url);
@@ -660,7 +619,7 @@ async function extractOne(url, depth) {
     dbg('resolver error', server, url, e && e.message);
     result = null;
   }
-  if ((!result || !result.url) && server !== 'unknown' && server !== 'cuevana-player') {
+  if ((!result || !result.url) && server !== 'unknown') {
     try {
       result = await resolveGeneric(url, depth);
     } catch (e) {}
@@ -669,17 +628,7 @@ async function extractOne(url, depth) {
 }
 async function extract(embedUrl, depth) {
   depth = depth || 0;
-  if (!embedUrl || depth > 4) return null;
-
-  // Siempre intentar desenvvolver player.php primero
-  if (String(embedUrl).indexOf('player.php') >= 0 || String(embedUrl).indexOf('player.cuevana') >= 0) {
-    var realEmbed = await unwrapCuevanaPlayer(embedUrl);
-    if (realEmbed && realEmbed !== embedUrl) {
-      dbg('player.php →', realEmbed);
-      return await extract(realEmbed, depth + 1);
-    }
-  }
-
+  if (!embedUrl || depth > 3) return null;
   var candidates = embedCandidates(embedUrl);
   dbg('candidatos', candidates);
   for (var i = 0; i < candidates.length; i++) {
@@ -929,7 +878,7 @@ async function getStreamsReal(id, type, season, episode) {
   var jobs = [];
   groups.forEach(function (group) {
     group.videos.forEach(function (video) {
-      // Sin filtro: intenta resolver TODOS los servidores (streamwish, voe, dood, etc.)
+      if (!isAllowed(video.cyberlocker) && !isAllowed(hostOf(video.url))) return;
       jobs.push(processVideo(group, video));
     });
   });
@@ -1390,30 +1339,84 @@ async function enrichWithTmdb(item, opts) {
     item.extra = item.extra || {};
     item.extra.tmdbId = tmdbId;
     item.extra.mediaType = type;
-    // Mantener id = URL si ya la tenía
-    if (!item.url && !/^https?:\/\//i.test(String(item.id))) {
-      // no pisar URL-id
-    }
   }
 
   if (tmdbId && opts.seasons && type === 'tv') {
     item.seasons = await tmdbSeasons(tmdbId);
   }
 
-  if (tmdbId && (!item.genres || !item.genres.length || !item.overview)) {
-    var tmdbData = await tmdbDetail(tmdbId, type);
-    if (tmdbData) {
-      if ((!item.genres || !item.genres.length) && Array.isArray(tmdbData.genres)) {
-        item.genres = tmdbData.genres.map(function (g) {
-          return g.name;
-        });
+  // Detalle completo: sinopsis, géneros, runtime, poster, backdrop, logo, cast
+  if (tmdbId) {
+    try {
+      var path = type === 'tv' ? '/tv/' + tmdbId : '/movie/' + tmdbId;
+      var tmdbData = await tmdbGet(path, {
+        append_to_response: 'credits,images',
+        include_image_language: 'es,en,null',
+      });
+      if (tmdbData) {
+        if ((!item.genres || !item.genres.length) && Array.isArray(tmdbData.genres)) {
+          item.genres = tmdbData.genres.map(function (g) {
+            return g.name;
+          });
+        }
+        if (!item.overview && tmdbData.overview) item.overview = tmdbData.overview;
+        if (!item.poster && tmdbData.poster_path)
+          item.poster = TMDB_IMG + '/w500' + tmdbData.poster_path;
+        if (!item.backdrop && tmdbData.backdrop_path)
+          item.backdrop = TMDB_IMG + '/w1280' + tmdbData.backdrop_path;
+        if (!item.rating && tmdbData.vote_average)
+          item.rating = Number(tmdbData.vote_average);
+        if (!item.year) {
+          var y2 = yearFromDate(tmdbData.release_date || tmdbData.first_air_date);
+          if (y2) item.year = String(y2);
+        }
+        // Runtime (movie) o episode_run_time (tv)
+        var rt =
+          tmdbData.runtime ||
+          (Array.isArray(tmdbData.episode_run_time) && tmdbData.episode_run_time[0]) ||
+          null;
+        if (rt) item.extra.runtime = rt;
+
+        // Logo (preferir es / en)
+        var imgs = tmdbData.images || {};
+        var logos = imgs.logos || [];
+        if (logos.length && !item.logo) {
+          var logoPick =
+            logos.find(function (l) {
+              return l.iso_639_1 === 'es';
+            }) ||
+            logos.find(function (l) {
+              return l.iso_639_1 === 'en';
+            }) ||
+            logos.find(function (l) {
+              return !l.iso_639_1;
+            }) ||
+            logos[0];
+          if (logoPick && logoPick.file_path) {
+            item.logo = TMDB_IMG + '/w500' + logoPick.file_path;
+          }
+        }
+
+        // Cast (primeros 15)
+        var credits = tmdbData.credits || {};
+        var castList = credits.cast || [];
+        if (castList.length) {
+          item.extra.cast = castList.slice(0, 15).map(function (c) {
+            return {
+              name: c.name,
+              character: c.character || '',
+              profile_path: c.profile_path
+                ? TMDB_IMG + '/w185' + c.profile_path
+                : null,
+            };
+          });
+        }
+
+        if (tmdbData.status) item.extra.status = tmdbData.status;
+        if (tmdbData.original_language)
+          item.extra.original_language = tmdbData.original_language;
       }
-      if (!item.overview && tmdbData.overview) item.overview = tmdbData.overview;
-      if (!item.poster && tmdbData.poster_path)
-        item.poster = TMDB_IMG + '/w342' + tmdbData.poster_path;
-      if (!item.backdrop && tmdbData.backdrop_path)
-        item.backdrop = TMDB_IMG + '/w780' + tmdbData.backdrop_path;
-    }
+    } catch (e) {}
   }
 
   return item;
