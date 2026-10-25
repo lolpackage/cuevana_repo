@@ -1,57 +1,77 @@
 {
-  "id": "cuevana-nuvio",
-  "name": "Cuevana",
-  "version": "1.0.2",
+  "id": "cuevana-pro",
+  "name": "Cuevana Pro",
+  "version": "1.0.1",
+  "description": "Películas y series en Español Latino, Castellano e Inglés desde Cuevana. v1.0.1 — fix exports CommonJS para que la app cargue getHome/getStreams/etc.",
+  "author": "xuper-plugin (port)",
+  "repo": "cuevana-pro",
+  "entry": "plugin.js",
+  "icon": "icon.png",
   "apiVersion": 6,
   "browser": true,
-  "entry": "index.js",
-  "section": { "label": "Cuevana" },
-  "icon": "https://wv3.cuevana3.eu/favicon-32x32.png",
-  "homepage": "https://wv3.cuevana3.eu",
-  "author": "Community",
-  "description": "Películas y series de Cuevana. Home, búsqueda, descubrir, detalle y streams HLS (VOE, StreamWish, VidHide).",
-  "color": "#E50914",
-  "theme": {
-    "accent": "#E50914",
-    "onAccent": "#ffffff",
-    "background": "#0B0E14",
-    "surface": "#141A22",
-    "highlight": "#FF2D2D"
+  "section": {
+    "label": "Cuevana Pro"
   },
+  "languages": [
+    "Latino",
+    "Castellano",
+    "Inglés"
+  ],
   "capabilities": [
     "home",
-    "search",
     "discover",
+    "search",
     "meta",
-    "streams",
-    "catalogs"
+    "streams"
   ],
-  "languages": ["Latino", "Castellano", "Inglés", "Subtitulado"],
-  "episodesPagination": true,
-  "episodesPerPage": 25,
+  "tabs": [
+    "home",
+    "discover",
+    "search",
+    "library",
+    "settings"
+  ],
+  "newsImageStyle": "banner",
+  "episodesPagination": {
+    "enabled": true,
+    "perPage": 25
+  },
+  "theme": {
+    "accent": "#3B82F6",
+    "onAccent": "#FFFFFF",
+    "background": "#08101F",
+    "surface": "#111C33",
+    "highlight": "#93C5FD"
+  },
   "config": [
     {
-      "key": "base_url",
-      "label": "URL base Cuevana",
-      "type": "url",
-      "default": "https://wv3.cuevana3.eu",
-      "placeholder": "https://wv3.cuevana3.eu",
-      "required": false
-    },
-    {
-      "key": "tmdb_key",
-      "label": "TMDB API Key (opcional)",
-      "type": "text",
-      "default": "",
-      "placeholder": "Dejar vacío para usar la de demo"
-    },
-    {
-      "key": "preferred_language",
-      "label": "Idioma preferido de servidores",
+      "key": "pref_lang",
+      "label": "Idioma preferido",
       "type": "select",
-      "default": "Latino",
-      "description": "Se usa al abrir el player para elegir el servidor de este idioma primero.",
-      "options": ["Latino", "Castellano", "Inglés", "Subtitulado"]
+      "default": "latino",
+      "description": "Se prioriza este idioma al listar servidores. Si falla, se ofrecen los demás.",
+      "options": [
+        {
+          "id": "latino",
+          "label": "Latino"
+        },
+        {
+          "id": "spanish",
+          "label": "Castellano"
+        },
+        {
+          "id": "english",
+          "label": "Inglés"
+        }
+      ]
+    }
+  ],
+  "notices": [
+    {
+      "id": "v1-first",
+      "title": "¡Primera versión de Cuevana Pro!",
+      "message": "Este repositorio es la versión 1.0.0 (port inicial). Incluye catálogo, búsqueda, detalles, episodios y servidores. Se esperan mejoras en extractores de video, estabilidad de mirrors y más opciones. ¡Gracias por probar!",
+      "buttonText": "Entendido"
     }
   ]
 }

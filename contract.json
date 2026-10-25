@@ -1,82 +1,17 @@
 {
   "apiVersion": 6,
   "maxApiVersion": 6,
+  "categories": ["movies", "series"],
+  "browser": true,
+  "telemetry": false,
   "capabilities": {
-    "names": ["home", "search", "discover", "meta", "streams", "catalogs"],
-    "required": ["streams"],
-    "atLeastOneOf": ["search", "home"],
-    "needsApproval": [],
-    "apiVersions": { "meta": 6 }
+    "names": ["home", "discover", "search", "meta", "streams"],
+    "required": ["home", "streams"],
+    "needsApproval": ["browser"]
   },
   "manifest": {
-    "idPattern": "^[a-z0-9][a-z0-9-]{1,39}$",
-    "nameMaxChars": 40,
-    "descriptionMaxChars": 300,
-    "authorMaxChars": 60,
-    "colorPattern": "^#[0-9A-Fa-f]{6}$",
-    "entryMaxBytes": 1048576,
-    "iconMaxBytes": 131072,
-    "versionPattern": "^(0|[1-9]\\d{0,5})\\.(0|[1-9]\\d{0,5})\\.(0|[1-9]\\d{0,5})$",
     "browser": {
-      "apiVersion": 6,
-      "consentLine": "Puede abrir páginas web ocultas para encontrar el video"
-    },
-    "section": { "apiVersion": 6, "labelMaxChars": 20 },
-    "theme": {
-      "apiVersion": 6,
-      "tokens": ["accent", "onAccent", "background", "surface", "highlight"],
-      "defaults": {
-        "accent": "#E50914",
-        "onAccent": "#FFFFFF",
-        "background": "#0B0E14",
-        "surface": "#141A22",
-        "highlight": "#FF2D2D"
-      }
-    },
-    "categories": {
-      "values": ["movies", "series"]
+      "consentLine": "Este repo puede abrir páginas web ocultas (WebView) para extraer el video de algunos servidores (ej. VOE)."
     }
-  },
-  "settings": {
-    "max": 12,
-    "types": {
-      "text": { "maxChars": 500, "canBeRequired": true, "canHaveDefault": true },
-      "url": { "maxChars": 2048, "canBeRequired": true, "canHaveDefault": false },
-      "select": { "canBeRequired": false, "canHaveDefault": true }
-    }
-  },
-  "output": {
-    "maxSearchItems": 100,
-    "maxHomeRows": 20,
-    "maxRowItems": 60,
-    "maxEpisodes": 5000,
-    "maxSeasons": 50,
-    "maxHeaders": 20,
-    "itemKinds": ["movie", "series"]
-  },
-  "timeoutsMs": {
-    "load": 10000,
-    "search": 15000,
-    "home": 20000,
-    "browse": 20000,
-    "episodes": 20000,
-    "resolve": 20000,
-    "browserResolve": 75000
-  },
-  "fetch": {
-    "methods": ["GET", "HEAD"],
-    "defaultTimeoutMs": 15000,
-    "maxTimeoutMs": 30000,
-    "maxRequestsPerCall": 60
-  },
-  "browser": {
-    "apiVersion": 6,
-    "onlyFrom": "resolve",
-    "defaultTimeoutMs": 18000,
-    "maxTimeoutMs": 25000
-  },
-  "errors": {
-    "codes": ["not_found", "unavailable", "rate_limited"],
-    "maxMessageChars": 200
   }
 }
