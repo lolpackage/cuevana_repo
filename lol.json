@@ -1,0 +1,57 @@
+{
+  "id": "cuevana-nuvio",
+  "name": "Cuevana",
+  "version": "1.0.2",
+  "apiVersion": 6,
+  "browser": true,
+  "entry": "index.js",
+  "section": { "label": "Cuevana" },
+  "icon": "https://wv3.cuevana3.eu/favicon-32x32.png",
+  "homepage": "https://wv3.cuevana3.eu",
+  "author": "Community",
+  "description": "Películas y series de Cuevana. Home, búsqueda, descubrir, detalle y streams HLS (VOE, StreamWish, VidHide).",
+  "color": "#E50914",
+  "theme": {
+    "accent": "#E50914",
+    "onAccent": "#ffffff",
+    "background": "#0B0E14",
+    "surface": "#141A22",
+    "highlight": "#FF2D2D"
+  },
+  "capabilities": [
+    "home",
+    "search",
+    "discover",
+    "meta",
+    "streams",
+    "catalogs"
+  ],
+  "languages": ["Latino", "Castellano", "Inglés", "Subtitulado"],
+  "episodesPagination": true,
+  "episodesPerPage": 25,
+  "config": [
+    {
+      "key": "base_url",
+      "label": "URL base Cuevana",
+      "type": "url",
+      "default": "https://wv3.cuevana3.eu",
+      "placeholder": "https://wv3.cuevana3.eu",
+      "required": false
+    },
+    {
+      "key": "tmdb_key",
+      "label": "TMDB API Key (opcional)",
+      "type": "text",
+      "default": "",
+      "placeholder": "Dejar vacío para usar la de demo"
+    },
+    {
+      "key": "preferred_language",
+      "label": "Idioma preferido de servidores",
+      "type": "select",
+      "default": "Latino",
+      "description": "Se usa al abrir el player para elegir el servidor de este idioma primero.",
+      "options": ["Latino", "Castellano", "Inglés", "Subtitulado"]
+    }
+  ]
+}
